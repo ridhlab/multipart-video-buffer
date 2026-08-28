@@ -10,9 +10,9 @@ npm start
 
 Node menyajikan halaman di `http://127.0.0.1:3000` tanpa langsung menjalankan FFmpeg.
 Buka URL tersebut, ubah JSON array URL bila perlu, lalu tekan **Connect & play**.
-Browser memanggil `POST /api/streams/start` agar Node menjalankan `live/test-000.flv`.
-Ketika browser mendeteksi akhir sebuah segmen, halaman
-memanggil `POST /api/streams/next` dan Node menjalankan file `test-NNN.flv` berikutnya.
+Browser memanggil `POST /open-stream` dengan body `{"filename":"test-000.flv"}`.
+Ketika browser mendeteksi akhir sebuah segmen, halaman memanggil endpoint yang sama
+dengan nama file `test-NNN.flv` berikutnya dari playlist.
 Tekan `Ctrl+C` pada proses Node untuk menghentikan seluruh child process FFmpeg.
 
 Node mengharapkan RTMP server di `rtmp://127.0.0.1:1935/live` dan HTTP-FLV tersedia

@@ -2,7 +2,7 @@ import { clampSeekSeconds, parseSegmentList } from "./app-logic.js";
 import { createCachedFetchLoader } from "./cached-fetch-loader.js";
 import { RollingSegmentCache } from "./rolling-segment-cache.js";
 import { BufferedCompletionTracker, SegmentCompletionController } from "./buffered-completion.js";
-import { triggerInitialStream, triggerNextStream } from "./stream-trigger.js";
+import { openStream } from "./stream-trigger.js";
 
 const MAX_CACHE_DURATION_MS = 5 * 60 * 1000;
 const END_TOLERANCE_SECONDS = 2;
@@ -35,6 +35,7 @@ let seekingFromApp = false;
 let completionController = null;
 let completionTracker = null;
 let activeSegment = null;
+let playlistSegments = [];
 const triggeringSegments = new Set();
 
 function formatTime(seconds) {
@@ -81,11 +82,17 @@ async function finishSegmentAndStartNext(segment) {
   if (triggeringSegments.has(segment.id)) return;
   triggeringSegments.add(segment.id);
   try {
-    const result = await triggerNextStream(segment.url);
-    if (result.started) {
-      writeLog(`Node started RTMP stream ${result.streamName}`);
+    const currentIndex = playlistSegments.findIndex((item) => item.id === segment.id);
+    const nextSegment = playlistSegments[currentIndex + 1];
+    if (nextSegment) {
+      const result = await openStream(nextSegment.url);
+      if (result.started) {
+        writeLog(`Node started RTMP stream ${result.streamName}`);
+      } else {
+        writeLog(`Node stream trigger: ${result.reason}`);
+      }
     } else {
-      writeLog(`Node stream trigger: ${result.reason}`);
+      writeLog("Reached the final stream in the playlist");
     }
     completionController?.complete(segment.id);
   } catch (error) {
@@ -149,8 +156,9 @@ async function connect() {
       throw new Error("Browser ini tidak mendukung flv.js melalui Media Source Extensions");
     const segments = parseSegmentList(elements.segmentList.value);
     disconnect({ preserveLog: true });
+    playlistSegments = segments;
     elements.status.textContent = "Starting initial stream";
-    const initialStream = await triggerInitialStream();
+    const initialStream = await openStream(segments[0].url);
     writeLog(
       initialStream.started
         ? `Node started RTMP stream ${initialStream.streamName}`
@@ -243,6 +251,7 @@ function disconnect({ preserveError = false, preserveLog = false } = {}) {
   completionTracker?.reset();
   completionTracker = null;
   activeSegment = null;
+  playlistSegments = [];
   triggeringSegments.clear();
   elements.video.removeAttribute("src");
   elements.video.load();

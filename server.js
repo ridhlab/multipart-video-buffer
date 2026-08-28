@@ -42,22 +42,19 @@ export function createAppServer({ controller, publicRoot }) {
         response.setHeader("access-control-allow-origin", origin);
         response.setHeader("vary", "Origin");
       }
-      if (request.method === "OPTIONS" && requestUrl.pathname.startsWith("/api/")) {
+      if (request.method === "OPTIONS" && requestUrl.pathname === "/open-stream") {
         if (!isLocalOrigin) return sendJson(response, 403, { error: "Origin not allowed" });
         response.setHeader("access-control-allow-methods", "POST, OPTIONS");
         response.setHeader("access-control-allow-headers", "content-type");
         response.writeHead(204);
         return response.end();
       }
-      if (request.method === "POST" && requestUrl.pathname === "/api/streams/start") {
-        return sendJson(response, 200, controller.start());
-      }
-      if (request.method === "POST" && requestUrl.pathname === "/api/streams/next") {
+      if (request.method === "POST" && requestUrl.pathname === "/open-stream") {
         const body = await readJson(request);
-        if (typeof body.currentStreamName !== "string" || body.currentStreamName === "") {
-          return sendJson(response, 400, { error: "currentStreamName is required" });
+        if (typeof body.filename !== "string" || body.filename === "") {
+          return sendJson(response, 400, { error: "filename is required" });
         }
-        return sendJson(response, 200, controller.advance(body.currentStreamName));
+        return sendJson(response, 200, controller.open(body.filename));
       }
 
       if (request.method !== "GET" && request.method !== "HEAD") {

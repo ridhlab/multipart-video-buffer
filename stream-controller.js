@@ -5,46 +5,31 @@ function streamNameFromFile(file) {
 }
 
 export class FfmpegStreamController {
-  #files;
+  #filesByName;
   #spawn;
   #ffmpegCommand;
   #rtmpBaseUrl;
-  #currentIndex = -1;
   #children = new Set();
+  #openedFiles = new Set();
 
   constructor({ files, spawnImpl, ffmpegCommand = "ffmpeg", rtmpBaseUrl }) {
     if (!Array.isArray(files) || files.length === 0) {
       throw new TypeError("At least one FLV file is required");
     }
     if (typeof spawnImpl !== "function") throw new TypeError("spawnImpl is required");
-    this.#files = [...files];
+    this.#filesByName = new Map(files.map((file) => [path.basename(file), file]));
     this.#spawn = spawnImpl;
     this.#ffmpegCommand = ffmpegCommand;
     this.#rtmpBaseUrl = rtmpBaseUrl.replace(/\/$/, "");
   }
 
-  start() {
-    if (this.#currentIndex >= 0) {
-      return { started: false, reason: "already-started", index: this.#currentIndex };
+  open(filename) {
+    const file = this.#filesByName.get(filename);
+    if (!file) throw new Error(`Unknown FLV file: ${filename}`);
+    if (this.#openedFiles.has(filename)) {
+      return { started: false, reason: "already-opened", filename };
     }
-    return this.#launch(0);
-  }
-
-  advance(currentStreamName) {
-    const reportedIndex = this.#files.findIndex(
-      (file) => streamNameFromFile(file) === currentStreamName,
-    );
-    if (reportedIndex < 0) throw new Error(`Unknown stream: ${currentStreamName}`);
-    if (reportedIndex < this.#currentIndex) {
-      return { started: false, reason: "already-advanced", index: this.#currentIndex };
-    }
-    if (reportedIndex !== this.#currentIndex) {
-      throw new Error(`Out-of-order stream trigger: ${currentStreamName}`);
-    }
-    if (reportedIndex + 1 >= this.#files.length) {
-      return { started: false, reason: "end-of-list", index: this.#currentIndex };
-    }
-    return this.#launch(reportedIndex + 1);
+    return this.#launch(filename, file);
   }
 
   stopAll() {
@@ -52,8 +37,7 @@ export class FfmpegStreamController {
     this.#children.clear();
   }
 
-  #launch(index) {
-    const file = this.#files[index];
+  #launch(filename, file) {
     const streamName = streamNameFromFile(file);
     const args = [
       "-re",
@@ -69,7 +53,7 @@ export class FfmpegStreamController {
       this.#children.delete(child);
       console.error(`Failed to start ${streamName}: ${error.message}`);
     });
-    this.#currentIndex = index;
-    return { started: true, streamName, index };
+    this.#openedFiles.add(filename);
+    return { started: true, filename, streamName };
   }
 }

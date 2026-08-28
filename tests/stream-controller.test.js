@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import { FfmpegStreamController } from "../stream-controller.js";
 
 function createHarness() {
@@ -8,13 +7,7 @@ function createHarness() {
   const children = [];
   const spawnImpl = (command, args, options) => {
     calls.push({ command, args, options });
-    const child = {
-      killed: false,
-      kill(signal) {
-        this.killed = signal;
-      },
-      once() {},
-    };
+    const child = { killed: false, kill(signal) { this.killed = signal; }, once() {} };
     children.push(child);
     return child;
   };
@@ -26,53 +19,38 @@ function createHarness() {
   return { controller, calls, children };
 }
 
-test("start launches the first FLV using ffmpeg without a shell", () => {
+test("open launches the requested allowlisted FLV without a shell", () => {
   const { controller, calls } = createHarness();
-
-  const result = controller.start();
-
-  assert.deepEqual(result, { started: true, streamName: "test-000", index: 0 });
+  const result = controller.open("test-001.flv");
+  assert.deepEqual(result, { started: true, filename: "test-001.flv", streamName: "test-001" });
   assert.deepEqual(calls, [{
     command: "ffmpeg",
-    args: [
-      "-re",
-      "-i", "/project/live/test-000.flv",
-      "-c", "copy",
-      "-f", "flv",
-      "rtmp://127.0.0.1:1935/live/test-000",
-    ],
+    args: ["-re", "-i", "/project/live/test-001.flv", "-c", "copy", "-f", "flv", "rtmp://127.0.0.1:1935/live/test-001"],
     options: { stdio: "inherit" },
   }]);
 });
 
-test("advance launches only the segment after the reported current stream", () => {
+test("open rejects filenames outside the allowlist", () => {
   const { controller, calls } = createHarness();
-  controller.start();
-
-  const result = controller.advance("test-000");
-
-  assert.deepEqual(result, { started: true, streamName: "test-001", index: 1 });
-  assert.equal(calls.length, 2);
-  assert.equal(calls[1].args.at(-1), "rtmp://127.0.0.1:1935/live/test-001");
+  assert.throws(() => controller.open("../test-001.flv"), /Unknown FLV file/);
+  assert.equal(calls.length, 0);
 });
 
-test("duplicate completion trigger does not launch ffmpeg twice", () => {
+test("open does not launch the same filename twice", () => {
   const { controller, calls } = createHarness();
-  controller.start();
-  controller.advance("test-000");
-
-  const result = controller.advance("test-000");
-
-  assert.deepEqual(result, { started: false, reason: "already-advanced", index: 1 });
-  assert.equal(calls.length, 2);
+  controller.open("test-000.flv");
+  assert.deepEqual(controller.open("test-000.flv"), {
+    started: false,
+    reason: "already-opened",
+    filename: "test-000.flv",
+  });
+  assert.equal(calls.length, 1);
 });
 
 test("stopAll terminates every ffmpeg child", () => {
   const { controller, children } = createHarness();
-  controller.start();
-  controller.advance("test-000");
-
+  controller.open("test-000.flv");
+  controller.open("test-001.flv");
   controller.stopAll();
-
   assert.deepEqual(children.map((child) => child.killed), ["SIGTERM", "SIGTERM"]);
 });
