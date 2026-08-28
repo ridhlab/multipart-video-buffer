@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>HTTP-FLV Multipart Buffer Demo</title>
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+    <body>
+        <main class="shell">
+            <header>
+                <p class="eyebrow">HTTP-FLV · flv.js · MSE</p>
+                <h1>Multipart rolling buffer</h1>
+                <p class="lede">
+                    Putar daftar FLV sebagai satu timeline dan simpan raw byte dari 10 segmen
+                    terbaru.
+                </p>
+            </header>
+
+            <section class="panel controls" aria-labelledby="source-heading">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="source-heading">Daftar segmen</h2>
+                        <p>Satu URL per segmen, durasi tetap 30 detik.</p>
+                    </div>
+                    <span class="pill">rolling window 5 menit</span>
+                </div>
+
+                <label for="segment-list"> JSON array — duration dalam detik </label>
+
+                <textarea id="segment-list" rows="13" spellcheck="false">
+[
+    {
+        "url": "http://127.0.0.1:8000/live/test-000.flv",
+        "duration": 15
+    },
+    {
+        "url": "http://127.0.0.1:8000/live/test-001.flv",
+        "duration": 15
+    },
+    {
+        "url": "http://127.0.0.1:8000/live/test-002.flv",
+        "duration": 15
+    }
+]
+
+                </textarea>
+
+                <p>Setiap segmen dapat memiliki durasi berbeda.</p>
+
+                <div class="button-row">
+                    <button id="connect" class="primary" type="button">Connect &amp; play</button>
+                    <button id="disconnect" type="button" disabled>Disconnect</button>
+                    <button id="go-live" type="button" disabled>Go to latest</button>
+                </div>
+            </section>
+
+            <section class="player-panel">
+                <video id="video" controls muted playsinline></video>
+                <div class="seek-row">
+                    <span id="seek-start">00:00</span>
+                    <input
+                        id="seek"
+                        type="range"
+                        min="0"
+                        max="0"
+                        value="0"
+                        step="0.1"
+                        disabled
+                        aria-label="Seek within retained buffer"
+                    />
+                    <span id="seek-end">00:00</span>
+                </div>
+            </section>
+
+            <section class="stats" aria-label="Buffer statistics">
+                <article><span>Status</span><strong id="status">Idle</strong></article>
+                <article>
+                    <span>Current segment</span><strong id="current-segment">—</strong>
+                </article>
+                <article><span>Raw cache</span><strong id="cache-size">0 B</strong></article>
+                <article>
+                    <span>Cached segments</span><strong id="cache-count">0 / 10</strong>
+                </article>
+                <article>
+                    <span>Retained timeline</span><strong id="retained-window">00:00–00:00</strong>
+                </article>
+                <article><span>Playback</span><strong id="playback-time">00:00</strong></article>
+            </section>
+
+            <p id="error" class="error" role="alert" hidden></p>
+            <pre id="log" class="log" aria-label="Activity log"></pre>
+        </main>
+
+        <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
+        <script type="module" src="./app.js"></script>
+    </body>
+</html>
