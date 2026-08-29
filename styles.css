@@ -30,6 +30,10 @@ button:disabled { cursor: not-allowed; opacity: 0.42; }
 video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #020304; }
 .seek-row { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 12px; padding: 14px 18px; color: #9ca4b5; font: 0.75rem ui-monospace, monospace; }
 input[type="range"] { width: 100%; accent-color: #6c95f2; }
+.buffered-summary { display: grid; grid-column: 2; gap: 6px; min-width: 0; }
+.buffered-track { position: relative; height: 5px; overflow: hidden; border-radius: 999px; background: #292f3d; }
+.buffered-range { position: absolute; top: 0; bottom: 0; border-radius: inherit; background: linear-gradient(90deg, #4e7de5, #74a0ff); }
+#buffered-label { overflow: hidden; color: #778196; font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
 .stats article { min-width: 0; border-radius: 13px; padding: 14px 16px; }
 .stats span { display: block; margin-bottom: 7px; color: #7f8797; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }

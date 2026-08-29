@@ -2,6 +2,7 @@ import { clampSeekSeconds, parseSegmentList } from "./app-logic.js";
 import { createCachedFetchLoader } from "./cached-fetch-loader.js";
 import { RollingSegmentCache } from "./rolling-segment-cache.js";
 import { BufferedCompletionTracker, SegmentCompletionController } from "./buffered-completion.js";
+import { normalizeBufferedRanges } from "./buffered-ui.js";
 import { openStream } from "./stream-trigger.js";
 
 const MAX_CACHE_DURATION_MS = 5 * 60 * 1000;
@@ -18,6 +19,8 @@ const elements = {
   seek: $("#seek"),
   seekStart: $("#seek-start"),
   seekEnd: $("#seek-end"),
+  bufferedTrack: $("#buffered-track"),
+  bufferedLabel: $("#buffered-label"),
   status: $("#status"),
   currentSegment: $("#current-segment"),
   cacheSize: $("#cache-size"),
@@ -78,6 +81,21 @@ function getLatestBufferedTime(video) {
   return ranges.end(ranges.length - 1);
 }
 
+function renderBufferedRanges(windowStart, windowEnd) {
+  const ranges = normalizeBufferedRanges(elements.video.buffered, windowStart, windowEnd);
+  const rangeElements = ranges.map((range) => {
+    const element = document.createElement("span");
+    element.className = "buffered-range";
+    element.style.left = `${range.leftPercent}%`;
+    element.style.width = `${range.widthPercent}%`;
+    return element;
+  });
+  elements.bufferedTrack.replaceChildren(...rangeElements);
+  elements.bufferedLabel.textContent = ranges.length
+    ? `Buffered: ${ranges.map((range) => `${formatTime(range.start)}–${formatTime(range.end)}`).join(", ")}`
+    : "Buffered: —";
+}
+
 async function finishSegmentAndStartNext(segment) {
   if (triggeringSegments.has(segment.id)) return;
   triggeringSegments.add(segment.id);
@@ -127,6 +145,7 @@ function updateUi() {
     );
   }
   elements.playbackTime.textContent = formatTime(elements.video.currentTime);
+  renderBufferedRanges(start, end);
 
   const bufferedUntil = getLatestBufferedTime(elements.video);
   console.log("time now", elements.video.currentTime, "bufferedUntil", bufferedUntil);
